@@ -76,8 +76,15 @@ def render_mentor_controls():
         
         # Event simulation
         st.subheader("🎯 Event Simulation")
-        if st.button("Simulate Student Exam", help="Simulate a student taking an exam to test nudge generation"):
-            simulate_student_exam(mentor_id)
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            if st.button("🐍 Python Exam", help="Simulate Python exam completion"):
+                simulate_student_exam(mentor_id, "Python Basics Final")
+        
+        with col2:
+            if st.button("📐 Math Exam", help="Simulate Math exam completion"):
+                simulate_student_exam(mentor_id, "Algebra Fundamentals")
         
         # Pending approvals
         if not mentor_online:
@@ -106,27 +113,45 @@ def analyze_mentor_style_ui(mentor_id: str):
             log_user_action(mentor_id, "STYLE_ANALYSIS_FAILED", {})
             st.error("❌ Failed to analyze style")
 
-def simulate_student_exam(mentor_id: str):
+def simulate_student_exam(mentor_id: str, exam_type: str):
     """Simulate a student taking an exam and generate a nudge"""
-    log_user_action(mentor_id, "EXAM_SIMULATION_REQUEST", {})
+    log_user_action(mentor_id, "EXAM_SIMULATION_REQUEST", {"exam_type": exam_type})
     
-    with st.spinner("Simulating student exam and generating nudge..."):
-        # Create exam event description
-        event_description = "Event: 'student took exam', Exam: 'Python Basics Final', Date: '2024-10-23', Student: 'student_001', Score: 'Pending'"
+    with st.spinner(f"Simulating {exam_type} exam and generating nudge..."):
+        # Create exam event description with conversation context
+        event_description = f"Event: 'student took exam', Exam: '{exam_type}', Date: '2024-10-23', Student: 'student_001', Score: 'Pending'"
+        
+        # Get conversation context if there's an active session
+        context_info = ""
+        if st.session_state.current_session_id:
+            messages = db.get_session_messages(st.session_state.current_session_id)
+            if messages:
+                recent_messages = messages[-3:]  # Get last 3 messages for context
+                context_info = "\nRecent conversation context:\n"
+                for msg in recent_messages:
+                    context_info += f"- {msg.sender_type}: {msg.content[:100]}...\n"
+        
+        full_event_description = event_description + context_info
         
         # Generate nudge using the nudge agent
         from agents import invoke_nudge_agent
-        nudge_message = invoke_nudge_agent(mentor_id, event_description)
+        nudge_message = invoke_nudge_agent(mentor_id, full_event_description)
         
         if nudge_message and not nudge_message.startswith("Sorry, I encountered an error"):
             log_user_action(mentor_id, "EXAM_SIMULATION_SUCCESS", {
-                "event_type": "student_exam",
-                "nudge_length": len(nudge_message)
+                "exam_type": exam_type,
+                "nudge_length": len(nudge_message),
+                "has_context": bool(context_info)
             })
             
-            st.success("🎯 Exam simulation completed!")
+            st.success(f"🎯 {exam_type} exam simulation completed!")
             st.info("**Generated Nudge Message:**")
             st.write(nudge_message)
+            
+            # Show context if available
+            if context_info:
+                with st.expander("📝 Conversation Context Used"):
+                    st.text(context_info)
             
             # Option to add this nudge to the current session
             if st.session_state.current_session_id:
@@ -142,7 +167,7 @@ def simulate_student_exam(mentor_id: str):
                     st.success("✅ Nudge added to current session!")
                     st.rerun()
         else:
-            log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {})
+            log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {"exam_type": exam_type})
             st.error("❌ Failed to generate nudge message")
 
 def render_pending_approvals(mentor_id: str):
