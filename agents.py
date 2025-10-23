@@ -1,0 +1,265 @@
+import google.generativeai as genai
+import os
+import streamlit as st
+from dotenv import load_dotenv
+from database import db, ChatSession, Message, MentorStyle
+from typing import Optional, List, Dict
+import time
+import json
+from logging_config import logger, log_ai_interaction, log_performance
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Define the model
+MODEL = "gemini-2.5-flash"
+
+def configure_gemini():
+    """Configure Google Gemini API"""
+    logger.info("Configuring Gemini API")
+    try:
+        # Configure the API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.error("GEMINI_API_KEY environment variable is missing")
+            st.error("GEMINI_API_KEY environment variable is missing. Please set it in your .env file or environment.")
+            st.stop()
+        
+        genai.configure(api_key=api_key)
+        logger.info("Gemini API configured successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error configuring Gemini API", error=str(e))
+        st.error(f"Error configuring Gemini: {str(e)}")
+        st.stop()
+
+# Configure Gemini API
+configure_gemini()
+
+# System prompt for the Reply Agent
+SYSTEM_PROMPT_REPLY = """You are a Style-Mimicking AI Agent. Your objective is to learn and replicate a mentor's communication style to generate a helpful reply to a student.
+**Core Requirements:**
+1.  **Analyze Style:** You MUST analyze the mentor's style from the <MENTOR_STYLE_EXAMPLES>. Learn their tone, vocabulary, message length, punctuation, and emoji usage.
+2.  **Be Context-Aware:** Your reply MUST be a direct and helpful response to the <NEW_STUDENT_MESSAGE>. Use the <CHAT_HISTORY> for context.
+3.  **Generate Reply:** Generate a reply that *authentically* matches the mentor's learned style.
+**Internal Reasoning Process (Do this step-by-step):**
+1.  **Analyze Mentor Style:** Read all <MENTOR_STYLE_EXAMPLES>. What is the tone (e.g., casual, encouraging)? What are common phrases (e.g., "Hey!", "No worries")? What emojis are used?
+2.  **Formulate Factual Answer:** Read the <NEW_STUDENT_MESSAGE> and <CHAT_HISTORY>. What is the student asking? Formulate a clear, helpful, and accurate answer in a neutral tone.
+3.  **Rewrite in Style:** Rewrite the neutral answer to perfectly match the mentor's style. Infuse it with the learned tone, vocabulary, and emojis.
+**Output Constraint:**
+Generate ONLY the final, rewritten reply to the student. DO NOT include your analysis or any other text."""
+
+# System prompt for the Nudge Agent
+SYSTEM_PROMPT_NUDGE = """You are a Proactive Mentor Agent specialized in generating contextual follow-up messages to students. Your role is to understand a mentor's unique communication style and create authentic, helpful messages that feel natural and supportive.
+
+**Your Capabilities:**
+- Analyze communication patterns including tone, vocabulary, sentence structure, punctuation, and emoji usage
+- Understand contextual triggers and determine appropriate follow-up actions
+- Generate messages that authentically match the mentor's established style
+- Maintain professional boundaries while being warm and encouraging
+
+**Security and Safety Guidelines:**
+- Never generate content that could be harmful, inappropriate, or violate educational boundaries
+- Avoid personal questions about sensitive topics (health, family, finances, etc.)
+- Maintain appropriate mentor-student relationship dynamics
+- Do not generate content that could be misconstrued as romantic, overly personal, or unprofessional
+- Focus on academic support, encouragement, and educational guidance
+- If a trigger event seems inappropriate or concerning, respond with general encouragement rather than specific follow-up
+
+**Communication Style Analysis:**
+When analyzing a mentor's style, pay attention to:
+- Tone: Formal vs. casual, encouraging vs. direct, warm vs. professional
+- Language patterns: Common phrases, greetings, sign-offs, punctuation habits
+- Emoji usage: Frequency, types, and placement
+- Message length and structure
+- Personal touches and unique expressions
+
+**Contextual Response Generation:**
+- Understand the trigger event and its educational significance
+- Determine the most appropriate and helpful follow-up action
+- Craft a message that feels natural and timely
+- Ensure the message adds value to the student's learning experience
+
+**Output Requirements:**
+Generate only the final nudge message. Do not include analysis, explanations, or meta-commentary. The message should be ready to send as-is and should feel like it was written by the mentor themselves."""
+
+def invoke_reply_agent(mentor_id: str, student_message: str, session_id: str, 
+                      mentor_style: Optional[str] = None) -> str:
+    """Generate a reply to a student message in the mentor's style"""
+    start_time = time.time()
+    logger.info(f"Generating AI reply", 
+               mentor_id=mentor_id, session_id=session_id, 
+               message_length=len(student_message))
+    
+    try:
+        # Get mentor style from database if not provided
+        if not mentor_style:
+            logger.debug("Retrieving mentor style from database", mentor_id=mentor_id)
+            mentor_style_data = db.get_mentor_style(mentor_id)
+            if mentor_style_data:
+                mentor_style = "\n".join(mentor_style_data.sample_messages)
+                logger.debug("Mentor style retrieved", 
+                           style_confidence=mentor_style_data.confidence_score)
+            else:
+                mentor_style = "No style examples available. Please provide mentor style examples."
+                logger.warning("No mentor style found in database", mentor_id=mentor_id)
+        
+        # Get chat history from database
+        logger.debug("Retrieving chat history", session_id=session_id)
+        chat_history = db.get_session_context(session_id)
+        
+        prompt_content = f"""<MENTOR_STYLE_EXAMPLES>
+{mentor_style}
+</MENTOR_STYLE_EXAMPLES>
+
+<CHAT_HISTORY>
+{chat_history}
+</CHAT_HISTORY>
+
+<NEW_STUDENT_MESSAGE>
+{student_message}
+</NEW_STUDENT_MESSAGE>"""
+        
+        logger.debug("Calling Gemini API for reply generation", 
+                   prompt_length=len(prompt_content))
+        
+        model = genai.GenerativeModel(MODEL)
+        response = model.generate_content(
+            f"{SYSTEM_PROMPT_REPLY}\n\n{prompt_content}"
+        )
+        
+        duration = time.time() - start_time
+        log_performance("AI_REPLY_GENERATION", duration, {
+            "mentor_id": mentor_id,
+            "session_id": session_id,
+            "response_length": len(response.text)
+        })
+        
+        log_ai_interaction(mentor_id, session_id, "REPLY_GENERATION", {
+            "student_message_length": len(student_message),
+            "response_length": len(response.text),
+            "duration": duration
+        })
+        
+        logger.info(f"AI reply generated successfully", 
+                   duration=f"{duration:.3f}s", response_length=len(response.text))
+        return response.text
+        
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"Error generating AI reply", 
+                    mentor_id=mentor_id, session_id=session_id, 
+                    error=str(e), duration=f"{duration:.3f}s")
+        st.error(f"Error generating reply: {str(e)}")
+        return "Sorry, I encountered an error while generating a reply. Please try again."
+
+def invoke_nudge_agent(mentor_id: str, event_description: str, 
+                      mentor_style: Optional[str] = None) -> str:
+    """Generate a proactive nudge message based on an event"""
+    start_time = time.time()
+    logger.info(f"Generating nudge message", mentor_id=mentor_id, event=event_description)
+    
+    try:
+        # Get mentor style from database if not provided
+        if not mentor_style:
+            mentor_style_data = db.get_mentor_style(mentor_id)
+            if mentor_style_data:
+                mentor_style = "\n".join(mentor_style_data.sample_messages)
+            else:
+                mentor_style = "No style examples available. Please provide mentor style examples."
+        
+        prompt_content = f"""<MENTOR_STYLE_EXAMPLES>
+{mentor_style}
+</MENTOR_STYLE_EXAMPLES>
+
+<TRIGGER_EVENT>
+{event_description}
+</TRIGGER_EVENT>"""
+        
+        model = genai.GenerativeModel(MODEL)
+        response = model.generate_content(
+            f"{SYSTEM_PROMPT_NUDGE}\n\n{prompt_content}"
+        )
+        
+        duration = time.time() - start_time
+        log_performance("AI_NUDGE_GENERATION", duration, {
+            "mentor_id": mentor_id,
+            "response_length": len(response.text)
+        })
+        
+        logger.info(f"Nudge generated successfully", duration=f"{duration:.3f}s")
+        return response.text
+        
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"Error generating nudge", mentor_id=mentor_id, error=str(e), duration=f"{duration:.3f}s")
+        st.error(f"Error generating nudge: {str(e)}")
+        return "Sorry, I encountered an error while generating a nudge. Please try again."
+
+def analyze_mentor_style(mentor_id: str, sample_messages: List[str]) -> Dict:
+    """Analyze mentor's communication style from sample messages"""
+    start_time = time.time()
+    logger.info(f"Analyzing mentor style", mentor_id=mentor_id, sample_count=len(sample_messages))
+    
+    try:
+        # Combine all sample messages
+        combined_messages = "\n".join(sample_messages)
+        
+        # Create analysis prompt
+        analysis_prompt = f"""
+        Analyze the following mentor's communication style and extract key patterns:
+        
+        {combined_messages}
+        
+        Please provide a JSON response with the following structure:
+        {{
+            "tone": "casual/formal/encouraging/direct",
+            "common_phrases": ["list of common phrases"],
+            "emoji_usage": "frequent/occasional/rare",
+            "message_length": "short/medium/long",
+            "greeting_style": "how they typically greet",
+            "sign_off_style": "how they typically end messages",
+            "punctuation_style": "exclamation_heavy/period_heavy/mixed",
+            "encouragement_level": "high/medium/low"
+        }}
+        """
+        
+        model = genai.GenerativeModel(MODEL)
+        response = model.generate_content(analysis_prompt)
+        
+        # Parse JSON response
+        style_data = json.loads(response.text)
+        
+        # Save to database
+        confidence_score = 0.8  # Could be calculated based on analysis quality
+        db.save_mentor_style(mentor_id, style_data, sample_messages, confidence_score)
+        
+        duration = time.time() - start_time
+        log_performance("STYLE_ANALYSIS", duration, {
+            "mentor_id": mentor_id,
+            "sample_count": len(sample_messages),
+            "confidence_score": confidence_score
+        })
+        
+        logger.info(f"Style analysis completed", duration=f"{duration:.3f}s", confidence=confidence_score)
+        return style_data
+        
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"Error analyzing mentor style", mentor_id=mentor_id, error=str(e), duration=f"{duration:.3f}s")
+        st.error(f"Error analyzing mentor style: {str(e)}")
+        return {}
+
+def generate_ai_response_with_approval(mentor_id: str, student_message: str, session_id: str) -> str:
+    """Generate AI response and add to approval queue"""
+    
+    # Generate the response
+    ai_response = invoke_reply_agent(mentor_id, student_message, session_id)
+    
+    # Add student message to database
+    student_message_id = db.add_message(session_id, 'student', student_message)
+    
+    # Add AI response to approval queue
+    queue_id = db.add_ai_response_to_queue(session_id, student_message_id, ai_response)
+    
+    return queue_id, ai_response
