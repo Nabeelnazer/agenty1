@@ -74,6 +74,11 @@ def render_mentor_controls():
         if st.button("Analyze My Style", help="Analyze your communication patterns"):
             analyze_mentor_style_ui(mentor_id)
         
+        # Event simulation
+        st.subheader("🎯 Event Simulation")
+        if st.button("Simulate Student Exam", help="Simulate a student taking an exam to test nudge generation"):
+            simulate_student_exam(mentor_id)
+        
         # Pending approvals
         if not mentor_online:
             render_pending_approvals(mentor_id)
@@ -100,6 +105,45 @@ def analyze_mentor_style_ui(mentor_id: str):
         else:
             log_user_action(mentor_id, "STYLE_ANALYSIS_FAILED", {})
             st.error("❌ Failed to analyze style")
+
+def simulate_student_exam(mentor_id: str):
+    """Simulate a student taking an exam and generate a nudge"""
+    log_user_action(mentor_id, "EXAM_SIMULATION_REQUEST", {})
+    
+    with st.spinner("Simulating student exam and generating nudge..."):
+        # Create exam event description
+        event_description = "Event: 'student took exam', Exam: 'Python Basics Final', Date: '2024-10-23', Student: 'student_001', Score: 'Pending'"
+        
+        # Generate nudge using the nudge agent
+        from agents import invoke_nudge_agent
+        nudge_message = invoke_nudge_agent(mentor_id, event_description)
+        
+        if nudge_message and not nudge_message.startswith("Sorry, I encountered an error"):
+            log_user_action(mentor_id, "EXAM_SIMULATION_SUCCESS", {
+                "event_type": "student_exam",
+                "nudge_length": len(nudge_message)
+            })
+            
+            st.success("🎯 Exam simulation completed!")
+            st.info("**Generated Nudge Message:**")
+            st.write(nudge_message)
+            
+            # Option to add this nudge to the current session
+            if st.session_state.current_session_id:
+                if st.button("Add Nudge to Current Session"):
+                    # Add the nudge as an AI message to the current session
+                    db.add_message(
+                        st.session_state.current_session_id, 
+                        'ai', 
+                        nudge_message, 
+                        is_ai_generated=True, 
+                        approval_status='approved'
+                    )
+                    st.success("✅ Nudge added to current session!")
+                    st.rerun()
+        else:
+            log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {})
+            st.error("❌ Failed to generate nudge message")
 
 def render_pending_approvals(mentor_id: str):
     """Render pending AI response approvals"""
