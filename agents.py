@@ -205,33 +205,54 @@ def analyze_mentor_style(mentor_id: str, sample_messages: List[str]) -> Dict:
         # Combine all sample messages
         combined_messages = "\n".join(sample_messages)
         
-        # Create analysis prompt
-        analysis_prompt = f"""
-        Analyze the following mentor's communication style and extract key patterns:
-        
-        {combined_messages}
-        
-        Please provide a JSON response with the following structure:
-        {{
-            "tone": "casual/formal/encouraging/direct",
-            "common_phrases": ["list of common phrases"],
-            "emoji_usage": "frequent/occasional/rare",
-            "message_length": "short/medium/long",
-            "greeting_style": "how they typically greet",
-            "sign_off_style": "how they typically end messages",
-            "punctuation_style": "exclamation_heavy/period_heavy/mixed",
-            "encouragement_level": "high/medium/low"
-        }}
-        """
+        # Create analysis prompt with better instructions
+        analysis_prompt = f"""You are a communication style analyzer. Analyze the following mentor's messages and return ONLY a valid JSON object with no additional text.
+
+Mentor Messages:
+{combined_messages}
+
+Return this exact JSON structure:
+{{
+    "tone": "casual",
+    "common_phrases": ["Hey!", "Great question", "No worries"],
+    "emoji_usage": "frequent",
+    "message_length": "medium",
+    "greeting_style": "casual with exclamation",
+    "sign_off_style": "encouraging with emojis",
+    "punctuation_style": "exclamation_heavy",
+    "encouragement_level": "high"
+}}
+
+IMPORTANT: Return ONLY the JSON object, no explanations or additional text."""
         
         model = genai.GenerativeModel(MODEL)
         response = model.generate_content(analysis_prompt)
         
+        # Clean the response text
+        response_text = response.text.strip()
+        
+        # Remove any markdown formatting if present
+        if response_text.startswith("```json"):
+            response_text = response_text.replace("```json", "").replace("```", "").strip()
+        elif response_text.startswith("```"):
+            response_text = response_text.replace("```", "").strip()
+        
+        logger.debug(f"Raw AI response: {response_text}")
+        
         # Parse JSON response
-        style_data = json.loads(response.text)
+        style_data = json.loads(response_text)
+        
+        # Validate the response has required fields
+        required_fields = ["tone", "common_phrases", "emoji_usage", "message_length", 
+                          "greeting_style", "sign_off_style", "punctuation_style", "encouragement_level"]
+        
+        for field in required_fields:
+            if field not in style_data:
+                logger.warning(f"Missing field in style analysis: {field}")
+                style_data[field] = "unknown"
         
         # Save to database
-        confidence_score = 0.8  # Could be calculated based on analysis quality
+        confidence_score = 0.8
         db.save_mentor_style(mentor_id, style_data, sample_messages, confidence_score)
         
         duration = time.time() - start_time
@@ -243,6 +264,28 @@ def analyze_mentor_style(mentor_id: str, sample_messages: List[str]) -> Dict:
         
         logger.info(f"Style analysis completed", duration=f"{duration:.3f}s", confidence=confidence_score)
         return style_data
+        
+    except json.JSONDecodeError as e:
+        duration = time.time() - start_time
+        logger.error(f"JSON parsing error in style analysis", mentor_id=mentor_id, error=str(e), 
+                    response_text=response_text if 'response_text' in locals() else "No response", 
+                    duration=f"{duration:.3f}s")
+        
+        # Return a default style if JSON parsing fails
+        default_style = {
+            "tone": "encouraging",
+            "common_phrases": ["Great question", "No worries", "You got this"],
+            "emoji_usage": "occasional",
+            "message_length": "medium",
+            "greeting_style": "friendly",
+            "sign_off_style": "encouraging",
+            "punctuation_style": "mixed",
+            "encouragement_level": "high"
+        }
+        
+        # Save default style to database
+        db.save_mentor_style(mentor_id, default_style, sample_messages, 0.5)
+        return default_style
         
     except Exception as e:
         duration = time.time() - start_time
