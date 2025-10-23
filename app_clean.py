@@ -86,6 +86,10 @@ def render_mentor_controls():
             if st.button("📐 Math Exam", help="Simulate Math exam completion"):
                 simulate_student_exam(mentor_id, "Algebra Fundamentals")
         
+        # Generated nudge section
+        if 'generated_nudge' in st.session_state and st.session_state.generated_nudge:
+            render_generated_nudge(mentor_id)
+        
         # Pending approvals
         if not mentor_online:
             render_pending_approvals(mentor_id)
@@ -153,9 +157,13 @@ def simulate_student_exam(mentor_id: str, exam_type: str):
                 with st.expander("📝 Conversation Context Used"):
                     st.text(context_info)
             
+            # Store the nudge message in session state for later use
+            st.session_state.generated_nudge = nudge_message
+            st.session_state.nudge_exam_type = exam_type
+            
             # Option to add this nudge to the current session
             if st.session_state.current_session_id:
-                if st.button("Add Nudge to Current Session"):
+                if st.button("Add Nudge to Current Session", key=f"add_nudge_{exam_type}"):
                     # Add the nudge as an AI message to the current session
                     db.add_message(
                         st.session_state.current_session_id, 
@@ -165,10 +173,59 @@ def simulate_student_exam(mentor_id: str, exam_type: str):
                         approval_status='approved'
                     )
                     st.success("✅ Nudge added to current session!")
+                    # Clear the stored nudge
+                    if 'generated_nudge' in st.session_state:
+                        del st.session_state.generated_nudge
+                    if 'nudge_exam_type' in st.session_state:
+                        del st.session_state.nudge_exam_type
                     st.rerun()
+            else:
+                st.warning("⚠️ No active session. Create a session first to add the nudge.")
         else:
             log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {"exam_type": exam_type})
             st.error("❌ Failed to generate nudge message")
+
+def render_generated_nudge(mentor_id: str):
+    """Render the generated nudge message with option to add to session"""
+    st.subheader("💬 Generated Nudge")
+    
+    exam_type = st.session_state.get('nudge_exam_type', 'Unknown')
+    nudge_message = st.session_state.generated_nudge
+    
+    st.info(f"**{exam_type} Nudge:**")
+    st.write(nudge_message)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.session_state.current_session_id:
+            if st.button("✅ Add to Session", key="add_nudge_to_session"):
+                # Add the nudge as an AI message to the current session
+                db.add_message(
+                    st.session_state.current_session_id, 
+                    'ai', 
+                    nudge_message, 
+                    is_ai_generated=True, 
+                    approval_status='approved'
+                )
+                st.success("✅ Nudge added to current session!")
+                # Clear the stored nudge
+                if 'generated_nudge' in st.session_state:
+                    del st.session_state.generated_nudge
+                if 'nudge_exam_type' in st.session_state:
+                    del st.session_state.nudge_exam_type
+                st.rerun()
+        else:
+            st.warning("⚠️ No active session")
+    
+    with col2:
+        if st.button("❌ Discard", key="discard_nudge"):
+            # Clear the stored nudge
+            if 'generated_nudge' in st.session_state:
+                del st.session_state.generated_nudge
+            if 'nudge_exam_type' in st.session_state:
+                del st.session_state.nudge_exam_type
+            st.rerun()
 
 def render_pending_approvals(mentor_id: str):
     """Render pending AI response approvals"""
