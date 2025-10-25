@@ -1,14 +1,13 @@
 """
-Xandy Learning AI Mentor System - Clean Production Version
-Optimized for performance and maintainability
+Xandy Learning AI Mentor System
+AI-assisted mentoring with style analysis and exam simulation
 """
 import streamlit as st
 import os
 from datetime import datetime
 from agents import (
     invoke_reply_agent, 
-    analyze_mentor_style,
-    generate_ai_response_with_approval
+    analyze_mentor_style
 )
 from database import db
 from logging_config import logger, log_user_action, log_ai_interaction
@@ -26,7 +25,6 @@ def init_session_state():
     defaults = {
         "current_session_id": None,
         "current_mentor_id": "mentor_001",
-        "mentor_online": False,
         "student_id": "student_001"
     }
     
@@ -36,7 +34,7 @@ def init_session_state():
 
 def render_mentor_controls():
     """Render mentor control panel"""
-    with st.sidebar:
+with st.sidebar:
         st.header("🎯 Mentor Controls")
         
         # Mentor ID
@@ -47,27 +45,9 @@ def render_mentor_controls():
         )
         st.session_state.current_mentor_id = mentor_id
         
-        # Status toggle
+        # Status display
         st.subheader("📡 Status")
-        mentor_online = st.toggle(
-            "I'm Online", 
-            value=st.session_state.mentor_online,
-            help="Toggle your availability"
-        )
-        
-        # Log status change
-        if mentor_online != st.session_state.mentor_online:
-            log_user_action(mentor_id, "STATUS_CHANGE", {
-                "old_status": "online" if st.session_state.mentor_online else "offline",
-                "new_status": "online" if mentor_online else "offline"
-            })
-            st.session_state.mentor_online = mentor_online
-        
-        # Status indicator
-        if mentor_online:
-            st.success("🟢 Online - Direct responses")
-        else:
-            st.warning("🔴 Offline - AI responses with approval")
+        st.info("🤖 AI-Assisted Mentoring Active")
         
         # Style analysis
         st.subheader("🎨 Style Management")
@@ -89,10 +69,6 @@ def render_mentor_controls():
         # Generated nudge section
         if 'generated_nudge' in st.session_state and st.session_state.generated_nudge:
             render_generated_nudge(mentor_id)
-        
-        # Pending approvals
-        if not mentor_online:
-            render_pending_approvals(mentor_id)
 
 def analyze_mentor_style_ui(mentor_id: str):
     """UI for mentor style analysis"""
@@ -160,27 +136,6 @@ def simulate_student_exam(mentor_id: str, exam_type: str):
             # Store the nudge message in session state for later use
             st.session_state.generated_nudge = nudge_message
             st.session_state.nudge_exam_type = exam_type
-            
-            # Option to add this nudge to the current session
-            if st.session_state.current_session_id:
-                if st.button("Add Nudge to Current Session", key=f"add_nudge_{exam_type}"):
-                    # Add the nudge as an AI message to the current session
-                    db.add_message(
-                        st.session_state.current_session_id, 
-                        'ai', 
-                        nudge_message, 
-                        is_ai_generated=True, 
-                        approval_status='approved'
-                    )
-                    st.success("✅ Nudge added to current session!")
-                    # Clear the stored nudge
-                    if 'generated_nudge' in st.session_state:
-                        del st.session_state.generated_nudge
-                    if 'nudge_exam_type' in st.session_state:
-                        del st.session_state.nudge_exam_type
-                    st.rerun()
-            else:
-                st.warning("⚠️ No active session. Create a session first to add the nudge.")
         else:
             log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {"exam_type": exam_type})
             st.error("❌ Failed to generate nudge message")
@@ -227,94 +182,48 @@ def render_generated_nudge(mentor_id: str):
                 del st.session_state.nudge_exam_type
             st.rerun()
 
-def render_pending_approvals(mentor_id: str):
-    """Render pending AI response approvals"""
-    st.subheader("⏳ Pending Approvals")
-    pending_responses = db.get_pending_ai_responses(mentor_id)
+def render_session_controls():
+    """Render session management controls"""
+    st.subheader("💬 Session Management")
     
-    if pending_responses:
-        st.write(f"**{len(pending_responses)} responses pending approval**")
-        
-        for response in pending_responses[:3]:  # Show max 3
-            with st.expander(f"Response from {response['created_at'][:19]}"):
-                st.write("**Student:**", response['student_message'])
-                st.write("**AI Response:**", response['generated_response'])
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("✅ Approve", key=f"approve_{response['id']}"):
-                        approve_response(mentor_id, response)
-                
-                with col2:
-                    if st.button("❌ Reject", key=f"reject_{response['id']}"):
-                        reject_response(mentor_id, response)
-    else:
-        st.info("No pending responses")
-
-def approve_response(mentor_id: str, response: dict):
-    """Approve an AI response"""
-    log_user_action(mentor_id, "AI_RESPONSE_APPROVED", {
-        "response_id": response['id'],
-        "session_id": response['session_id']
-    })
-    db.approve_ai_response(response['id'], mentor_id)
-    st.success("Response approved and sent!")
-    st.rerun()
-
-def reject_response(mentor_id: str, response: dict):
-    """Reject an AI response"""
-    log_user_action(mentor_id, "AI_RESPONSE_REJECTED", {
-        "response_id": response['id'],
-        "session_id": response['session_id']
-    })
-    db.reject_ai_response(response['id'])
-    st.error("Response rejected")
-    st.rerun()
-
-def render_chat_interface():
-    """Render main chat interface"""
-    col1, col2 = st.columns([2, 1])
+    # Create new session
+    if st.button("🆕 New Session", help="Start a new chat session"):
+        create_new_session()
     
-    with col1:
-        st.subheader("💬 Chat Interface")
-        
-        # Student ID
-        student_id = st.text_input("Student ID", value=st.session_state.student_id)
-        st.session_state.student_id = student_id
-        
-        # Session management
-        if st.button("Start New Session"):
-            create_new_session(student_id, st.session_state.current_mentor_id)
-        
-        # Chat display
-        if st.session_state.current_session_id:
-            render_chat_messages()
-            render_chat_input(student_id)
+    # Session info
+    if st.session_state.current_session_id:
+        session = db.get_session(st.session_state.current_session_id)
+        if session:
+            st.info(f"**Active Session:** {session.student_id} - {session.created_at[:19]}")
         else:
-            st.warning("Please start a new session to begin chatting.")
-    
-    with col2:
-        render_analytics()
+            st.warning("⚠️ Session not found")
+    else:
+        st.info("No active session")
 
-def create_new_session(student_id: str, mentor_id: str):
+def create_new_session():
     """Create a new chat session"""
-    log_user_action(mentor_id, "SESSION_CREATE_REQUEST", {"student_id": student_id})
+    mentor_id = st.session_state.current_mentor_id
+    student_id = st.session_state.student_id
     
-    session_id = db.create_session(student_id, mentor_id)
+    log_user_action(mentor_id, "SESSION_CREATED", {"student_id": student_id})
+    
+    session_id = db.create_session(mentor_id, student_id)
     st.session_state.current_session_id = session_id
     
-    log_user_action(mentor_id, "SESSION_CREATED", {
-        "session_id": session_id,
-        "student_id": student_id
-    })
-    
-    st.success(f"New session created: {session_id[:8]}...")
+    st.success("✅ New session created!")
+    st.rerun()
 
 def render_chat_messages():
-    """Render chat message history"""
-    st.info(f"Active Session: {st.session_state.current_session_id[:8]}...")
+    """Render chat messages for current session"""
+    if not st.session_state.current_session_id:
+        st.info("Create a session to start chatting")
+        return
     
     messages = db.get_session_messages(st.session_state.current_session_id)
+    
+    if not messages:
+        st.info("No messages yet. Start the conversation!")
+        return
     
     for message in messages:
         if message.sender_type == "student":
@@ -349,46 +258,29 @@ def handle_student_message(student_id: str, message: str):
     with st.chat_message("user"):
         st.write(message)
     
-    # Generate response
-    if st.session_state.mentor_online:
-        handle_mentor_response(session_id, student_id, mentor_id)
-    else:
-        handle_ai_response(session_id, student_id, mentor_id, message)
+    # Generate AI-assisted response
+    handle_ai_response(session_id, student_id, mentor_id, message)
     
     st.rerun()
 
-def handle_mentor_response(session_id: str, student_id: str, mentor_id: str):
-    """Handle direct mentor response"""
-    log_user_action(mentor_id, "MENTOR_RESPONSE_GENERATED", {
-        "session_id": session_id,
-        "student_id": student_id
-    })
-    
-    with st.chat_message("assistant"):
-        with st.spinner("Mentor is typing..."):
-            # Simulated mentor response
-            mentor_response = "Thanks for your message! I'm here to help. Let me think about this..."
-            st.write(mentor_response)
-            st.caption("👨‍🏫 Mentor Response")
-    
-    # Store mentor response
-    db.add_message(session_id, "mentor", mentor_response)
-
 def handle_ai_response(session_id: str, student_id: str, mentor_id: str, message: str):
-    """Handle AI response with approval workflow"""
-    log_ai_interaction(mentor_id, student_id, "AI_RESPONSE_QUEUED", {
+    """Handle AI response - direct response"""
+    log_ai_interaction(mentor_id, student_id, "AI_RESPONSE_GENERATED", {
         "session_id": session_id
     })
     
     with st.chat_message("assistant"):
         with st.spinner("AI is generating response..."):
-            queue_id, ai_response = generate_ai_response_with_approval(
-                mentor_id, message, session_id
-            )
+            ai_response = invoke_reply_agent(mentor_id, message, session_id)
             
-            st.write(ai_response)
-            st.caption("🤖 AI Generated - Pending Approval")
-            st.info("This response is waiting for mentor approval before being sent to the student.")
+            if ai_response and not ai_response.startswith("Sorry, I encountered an error"):
+                st.write(ai_response)
+                st.caption("🤖 AI Generated")
+                
+                # Store AI response directly
+                db.add_message(session_id, "ai", ai_response, is_ai_generated=True, approval_status="approved")
+            else:
+                st.error("❌ Failed to generate AI response")
 
 def render_analytics():
     """Render session analytics"""
@@ -397,45 +289,47 @@ def render_analytics():
     if st.session_state.current_session_id:
         messages = db.get_session_messages(st.session_state.current_session_id)
         
-        # Basic metrics
-        student_messages = len([m for m in messages if m.sender_type == "student"])
-        mentor_messages = len([m for m in messages if m.sender_type == "mentor"])
-        ai_messages = len([m for m in messages if m.sender_type == "ai"])
-        
-        st.metric("Student Messages", student_messages)
-        st.metric("Mentor Messages", mentor_messages)
-        st.metric("AI Messages", ai_messages)
-        
-        # Message timeline
         if messages:
-            st.subheader("📈 Recent Messages")
-            for msg in messages[-5:]:
-                timestamp = msg.created_at[:19]
-                sender = "👤" if msg.sender_type == "student" else "🤖" if msg.is_ai_generated else "👨‍🏫"
-                st.write(f"{sender} {timestamp}: {msg.content[:50]}...")
-    
-    # System status
-    st.subheader("🔧 System Status")
-    st.info("Database: Connected")
-    st.info(f"Mentor Status: {'Online' if st.session_state.mentor_online else 'Offline'}")
-    st.info("AI Model: Gemini 2.5 Flash")
+            student_messages = [m for m in messages if m.sender_type == "student"]
+            ai_messages = [m for m in messages if m.is_ai_generated]
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Total Messages", len(messages))
+            
+            with col2:
+                st.metric("Student Messages", len(student_messages))
+            
+            with col3:
+                st.metric("AI Responses", len(ai_messages))
+        else:
+            st.info("No messages to analyze")
+    else:
+        st.info("No active session")
 
 def main():
-    """Main application entry point"""
-    logger.info("Starting Xandy Learning AI Mentor System")
-    
-    # Initialize session state
+    """Main application function"""
+    # Initialize
     init_session_state()
+    db.init_database()
     
-    # Render UI
+    # Header
     st.title("🎓 Xandy Learning - AI Mentor System")
-    st.caption("Hybrid AI-Human mentor system with session management and approval workflow")
+    st.markdown("AI-assisted mentoring with personalized communication style")
     
-    # Render components
-    render_mentor_controls()
-    render_chat_interface()
+    # Layout
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        render_mentor_controls()
+        render_session_controls()
+        render_analytics()
+    
+    with col2:
+        st.subheader("💬 Chat Interface")
+        render_chat_messages()
+        render_chat_input(st.session_state.student_id)
 
 if __name__ == "__main__":
     main()
-
-
