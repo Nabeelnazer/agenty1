@@ -34,7 +34,7 @@ def init_session_state():
 
 def render_sidebar():
     """Render simplified sidebar"""
-    with st.sidebar:
+with st.sidebar:
         st.header("🎯 AI Style Mimicking System")
         
         # Mentor ID
@@ -49,8 +49,16 @@ def render_sidebar():
         
         # Style Analysis
         st.subheader("🎨 Style Analysis")
-        if st.button("Analyze My Style", help="Analyze your communication patterns"):
-            analyze_mentor_style_ui(mentor_id)
+        
+        # Mentor personality selection
+        mentor_type = st.selectbox(
+            "Choose Mentor Personality:",
+            ["Encouraging Mentor", "Direct Mentor", "Academic Mentor", "Casual Mentor"],
+            help="Select a mentor personality type to analyze"
+        )
+        
+        if st.button("Analyze Style", help="Analyze the selected mentor's communication patterns"):
+            analyze_mentor_style_ui(mentor_id, mentor_type)
         
         st.divider()
         
@@ -100,30 +108,65 @@ def render_sidebar():
             else:
                 st.warning("⚠️ No active session")
 
-def analyze_mentor_style_ui(mentor_id: str):
+def analyze_mentor_style_ui(mentor_id: str, mentor_type: str):
     """UI for mentor style analysis"""
-    log_user_action(mentor_id, "STYLE_ANALYSIS_REQUEST", {})
+    log_user_action(mentor_id, "STYLE_ANALYSIS_REQUEST", {"mentor_type": mentor_type})
     
-    with st.spinner("Analyzing your communication style..."):
-        sample_messages = [
-            "Hey! Great question 👍 So basically, you need to focus on the fundamentals first. Don't worry about advanced stuff yet... master the basics!",
-            "Yep, that's exactly right! You're getting it. Keep practicing and you'll be solid.",
-            "No worries if you're stuck! 😅 happens to everyone. Take a break and come back to it with fresh eyes. You got this! 💪",
-            "Hey! No worries, recursion can be tricky at first 😊 So basically, think of it like a function calling itself. Start with simple examples like factorial - that'll help you get the concept. Don't stress, you'll get it with practice! 💪",
-            "Perfect! You're on the right track. Just remember to always have a base case - that's the key to recursion not going on forever. You got this! 🎯"
-        ]
+    with st.spinner(f"Analyzing {mentor_type} communication style..."):
+        # Get sample messages based on mentor type
+        sample_messages = get_mentor_sample_messages(mentor_type)
         
         style_data = analyze_mentor_style(mentor_id, sample_messages)
         
         if style_data:
             log_user_action(mentor_id, "STYLE_ANALYSIS_SUCCESS", {
+                "mentor_type": mentor_type,
                 "style_characteristics": list(style_data.keys())
             })
-            st.success("✅ Style analyzed successfully!")
+            st.success(f"✅ {mentor_type} style analyzed successfully!")
             st.json(style_data)
         else:
-            log_user_action(mentor_id, "STYLE_ANALYSIS_FAILED", {})
+            log_user_action(mentor_id, "STYLE_ANALYSIS_FAILED", {"mentor_type": mentor_type})
             st.error("❌ Failed to analyze style")
+
+def get_mentor_sample_messages(mentor_type: str) -> list:
+    """Get sample messages for different mentor personality types"""
+    
+    mentor_samples = {
+        "Encouraging Mentor": [
+            "Good question! Let me help you understand this concept step by step.",
+            "You're on the right track! The key is to break it down into smaller parts.",
+            "Don't worry if it seems complex at first. Let's work through it together.",
+            "Great effort! Now let's see how we can improve this approach.",
+            "You've got this! Remember, every expert was once a beginner."
+        ],
+        
+        "Direct Mentor": [
+            "Here's how it works: you need to understand the fundamentals first.",
+            "The key is to practice consistently. No shortcuts around this.",
+            "Let's break this down: first, second, third. Clear?",
+            "This is the correct approach. Follow these steps exactly.",
+            "You need to focus on the basics before moving to advanced topics."
+        ],
+        
+        "Academic Mentor": [
+            "From a technical perspective, this concept involves several interconnected principles.",
+            "Consider this approach: we can analyze the problem using established methodologies.",
+            "The theoretical foundation is crucial here. Let me explain the underlying concepts.",
+            "Based on current best practices, I recommend this structured approach.",
+            "Let's examine this systematically, considering both the theoretical and practical aspects."
+        ],
+        
+        "Casual Mentor": [
+            "No worries, this is a common question. Let me show you how it works.",
+            "Got it? The trick is to think about it like this...",
+            "Makes sense? Basically, you just need to remember this one thing.",
+            "Cool, so here's what's happening under the hood.",
+            "Alright, let's tackle this step by step. Ready?"
+        ]
+    }
+    
+    return mentor_samples.get(mentor_type, mentor_samples["Encouraging Mentor"])
 
 def simulate_exam(mentor_id: str, exam_type: str):
     """Simulate a student taking an exam and generate a nudge"""
@@ -161,7 +204,7 @@ def create_new_session():
     st.session_state.current_session_id = session_id
     
     st.success("✅ New session created!")
-    st.rerun()
+        st.rerun()
 
 def render_chat_messages():
     """Render chat messages for current session"""
@@ -243,26 +286,44 @@ def render_demo_section():
     st.subheader("🎭 Style Mimicking Demo")
     
     st.markdown("""
-    **This system demonstrates AI communication style mimicking:**
+    **This system demonstrates AI communication style mimicking with multiple mentor personalities:**
     
-    **Mentor's Style (from sample messages):**
-    - **Tone**: Casual and encouraging
-    - **Common Phrases**: "Hey!", "So basically", "No worries", "You got this!"
-    - **Emoji Usage**: Frequent (👍, 😅, 💪, 😊, 🎯)
-    - **Teaching Approach**: Step-by-step with examples
+    **Available Mentor Types:**
+    
+    **1. Encouraging Mentor** - Supportive and motivating
+    - Tone: Positive and reassuring
+    - Phrases: "Good question!", "You're on the right track", "Let's work through it together"
+    - Approach: Step-by-step guidance with encouragement
+    
+    **2. Direct Mentor** - Straightforward and clear
+    - Tone: Professional and direct
+    - Phrases: "Here's how it works", "The key is", "Follow these steps exactly"
+    - Approach: Clear, structured explanations
+    
+    **3. Academic Mentor** - Formal and detailed
+    - Tone: Professional and analytical
+    - Phrases: "From a technical perspective", "Consider this approach", "Based on best practices"
+    - Approach: Comprehensive, theory-based explanations
+    
+    **4. Casual Mentor** - Relaxed and friendly
+    - Tone: Informal and approachable
+    - Phrases: "No worries", "Got it?", "Cool, so here's what's happening"
+    - Approach: Conversational, easy-going explanations
     
     **Example Student Message:**
     > "I'm having trouble understanding recursion. Can you help?"
     
-    **Expected AI Response (mimicking mentor's style):**
-    > "Hey! No worries, recursion can be tricky at first 😊 So basically, think of it like a function calling itself. Start with simple examples like factorial - that'll help you get the concept. Don't stress, you'll get it with practice! 💪"
+    **Different AI Responses based on mentor type:**
+    - **Encouraging**: "Good question! Let me help you understand this step by step. Don't worry if it seems complex at first."
+    - **Direct**: "Here's how it works: recursion is a function calling itself. The key is to have a base case."
+    - **Academic**: "From a technical perspective, recursion involves a function invoking itself with modified parameters."
+    - **Casual**: "No worries, this is a common question. Got it? The trick is to think about it like this..."
     
-    **The AI captures:**
-    - ✅ Casual, encouraging tone
-    - ✅ Use of phrases like "Hey!", "So basically", "No worries"
-    - ✅ Emoji usage (😊, 💪)
-    - ✅ Shorter sentences with reassuring language
-    - ✅ The mentor's supportive teaching style
+    **The AI captures each mentor's unique:**
+    - ✅ Communication tone and style
+    - ✅ Preferred phrases and expressions
+    - ✅ Teaching approach and structure
+    - ✅ Level of formality and encouragement
     """)
 
 def main():
