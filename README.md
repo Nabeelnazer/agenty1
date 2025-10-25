@@ -17,12 +17,12 @@ cp env.example .env
 
 3. **Run the application**
 ```bash
-streamlit run app_clean.py
+streamlit run app.py
 ```
 
 ## 📁 Files
 
-- `app_clean.py` - Main application
+- `app.py` - Main application
 - `agents.py` - AI agent functions
 - `database.py` - Database operations
 - `logging_config.py` - Logging system
