@@ -67,21 +67,25 @@ The system supports **4 distinct mentor personalities**, each based on **evidenc
 ### 1. **Encouraging Mentor** - Constructivist & Socratic Approach
 - **Methodology**: Builds on prior knowledge, uses Socratic questioning
 - **Teaching Style**: Scaffolding, positive reinforcement, active inquiry
-- **Example**: *"Great question! This shows you're thinking critically. Let me build on what you already know - can you tell me what you've tried so far?"*
+- **Communication**: Warm tone, frequent emojis (😊, 👏, 💭, ✨, 🚀), exclamation points
+- **Example**: *"Great question! 😊 This shows you're thinking critically. Let me build on what you already know - can you tell me what you've tried so far?"*
 
 ### 2. **Direct Mentor** - Mastery Learning & Deliberate Practice
 - **Methodology**: Bloom's Taxonomy, worked examples, immediate feedback
 - **Teaching Style**: Structured progression, competency-based advancement
+- **Communication**: No-nonsense tone, NO emojis, periods instead of exclamations, concise
 - **Example**: *"Let's apply Bloom's Taxonomy here. First, understand the concept. Then, we'll apply it to solve real problems."*
 
 ### 3. **Academic Mentor** - Cognitive & Metacognitive Strategies
 - **Methodology**: Zone of proximal development, cognitive load theory, metacognition
 - **Teaching Style**: Explicit modeling, spaced repetition, systematic chunking
-- **Example**: *"Let's apply constructivist principles here. What prior knowledge can we activate to build upon?"*
+- **Communication**: Formal language ("let us", "shall"), NO emojis, professional terminology
+- **Example**: *"Let us apply constructivist principles here. What prior knowledge can we activate to build upon?"*
 
 ### 4. **Casual Mentor** - Active Learning & Discovery
 - **Methodology**: Analogical reasoning, experiential learning, guided discovery
 - **Teaching Style**: Real-world examples, student-driven exploration
+- **Communication**: Conversational, ellipsis (...), informal phrases, NO emojis but friendly
 - **Example**: *"Let's think about this together. What's your intuition telling you? Often your first instinct points us in the right direction."*
 
 ## 📚 Evidence-Based Teaching Principles

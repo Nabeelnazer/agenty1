@@ -134,34 +134,34 @@ def get_mentor_sample_messages(mentor_type: str) -> list:
     
     mentor_samples = {
         "Encouraging Mentor": [
-            "Great question! This shows you're thinking critically. Let me build on what you already know - can you tell me what you've tried so far?",
-            "You're making excellent progress! I can see you understand the foundation. Now, let's connect this to the next concept.",
-            "I appreciate your effort here. Let's use the Socratic method - what do you think might happen if we approach it this way?",
-            "This is a common challenge, and asking about it shows real learning. Let's break it into smaller, manageable pieces.",
-            "You've demonstrated good understanding of the basics. Now let's scaffold up to the more complex parts together."
+            "Great question! 😊 This shows you're thinking critically. Let me build on what you already know - can you tell me what you've tried so far?",
+            "You're making excellent progress! 👏 I can see you understand the foundation. Now, let's connect this to the next concept.",
+            "I appreciate your effort here. Let's use the Socratic method - what do you think might happen if we approach it this way? 💭",
+            "This is a common challenge, and asking about it shows real learning. Let's break it into smaller, manageable pieces. ✨",
+            "You've demonstrated good understanding of the basics. Now let's scaffold up to the more complex parts together! 🚀"
         ],
         
         "Direct Mentor": [
             "Let's apply Bloom's Taxonomy here. First, understand the concept. Then, we'll apply it to solve real problems.",
             "Here's the core principle. Practice this pattern: understand, apply, analyze. Let's start with a concrete example.",
-            "Focus on mastery learning - we won't move forward until you've fully grasped this foundation. Let's verify your understanding.",
+            "Focus on mastery learning. We won't move forward until you've fully grasped this foundation. Let's verify your understanding.",
             "Let me demonstrate this using worked examples. Watch how I approach it, then you'll try with guided practice.",
             "The key is deliberate practice with immediate feedback. Try this problem, and I'll show you exactly where to improve."
         ],
         
         "Academic Mentor": [
-            "Let's apply constructivist principles here. What prior knowledge can we activate to build upon?",
-            "Consider the zone of proximal development - this challenge is slightly beyond your current level, which means optimal growth.",
-            "Let's use metacognitive strategies. As we work through this, I'll model my thinking process explicitly.",
-            "From a pedagogical perspective, we should employ spaced repetition. Let's review the foundation before adding complexity.",
-            "Using cognitive load theory, let's chunk this information. We'll tackle each piece sequentially to avoid overwhelm."
+            "Let us apply constructivist principles here. What prior knowledge can we activate to build upon?",
+            "Consider the zone of proximal development: this challenge is slightly beyond your current level, which means optimal growth.",
+            "Let us use metacognitive strategies. As we work through this, I shall model my thinking process explicitly.",
+            "From a pedagogical perspective, we should employ spaced repetition. Let us review the foundation before adding complexity.",
+            "Using cognitive load theory, let us chunk this information. We shall tackle each piece sequentially to avoid overwhelm."
         ],
         
         "Casual Mentor": [
             "Let's think about this together. What's your intuition telling you? Often your first instinct points us in the right direction.",
-            "Makes sense? Let's use an analogy you already know - think of it like [familiar concept]. Now apply that logic here.",
-            "I'll show you a real-world example first. Once you see it in action, the abstract concept will click.",
-            "Let's do some active learning. Instead of me explaining, try it yourself and I'll guide you if you get stuck.",
+            "Makes sense? Let's use an analogy you already know... think of it like a recipe. Now apply that logic here.",
+            "I'll show you a real-world example first. Once you see it in action, the abstract concept will click. Trust me on this.",
+            "Let's do some active learning. Instead of me explaining everything, try it yourself and I'll guide you if you get stuck.",
             "Good question! Before I answer, let me ask you something that'll help you discover it yourself - what patterns do you notice?"
         ]
     }
