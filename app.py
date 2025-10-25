@@ -40,7 +40,7 @@ with st.sidebar:
         # Mentor ID
         mentor_id = st.text_input(
             "Mentor ID", 
-            value=st.session_state.current_mentor_id,
+            value=st.session_state.get("current_mentor_id", "mentor_001"),
             help="Your unique mentor identifier"
         )
         st.session_state.current_mentor_id = mentor_id
@@ -69,6 +69,11 @@ with st.sidebar:
         # Generated nudge section
         if 'generated_nudge' in st.session_state and st.session_state.generated_nudge:
             render_generated_nudge(mentor_id)
+        
+        # Demo section
+        st.subheader("🎭 Style Demo")
+        if st.button("Show Style Mimicking Demo", help="See how the AI mimics communication style"):
+            show_style_demo()
 
 def analyze_mentor_style_ui(mentor_id: str):
     """UI for mentor style analysis"""
@@ -78,7 +83,9 @@ def analyze_mentor_style_ui(mentor_id: str):
         sample_messages = [
             "Hey! Great question 👍 So basically, you need to focus on the fundamentals first. Don't worry about advanced stuff yet... master the basics!",
             "Yep, that's exactly right! You're getting it. Keep practicing and you'll be solid.",
-            "No worries if you're stuck! 😅 happens to everyone. Take a break and come back to it with fresh eyes. You got this! 💪"
+            "No worries if you're stuck! 😅 happens to everyone. Take a break and come back to it with fresh eyes. You got this! 💪",
+            "Hey! No worries, recursion can be tricky at first 😊 So basically, think of it like a function calling itself. Start with simple examples like factorial - that'll help you get the concept. Don't stress, you'll get it with practice! 💪",
+            "Perfect! You're on the right track. Just remember to always have a base case - that's the key to recursion not going on forever. You got this! 🎯"
         ]
         
         style_data = analyze_mentor_style(mentor_id, sample_messages)
@@ -103,8 +110,8 @@ def simulate_student_exam(mentor_id: str, exam_type: str):
         
         # Get conversation context if there's an active session
         context_info = ""
-        if st.session_state.current_session_id:
-            messages = db.get_session_messages(st.session_state.current_session_id)
+        if st.session_state.get("current_session_id"):
+            messages = db.get_session_messages(st.session_state.get("current_session_id"))
             if messages:
                 recent_messages = messages[-3:]  # Get last 3 messages for context
                 context_info = "\nRecent conversation context:\n"
@@ -140,6 +147,46 @@ def simulate_student_exam(mentor_id: str, exam_type: str):
             log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {"exam_type": exam_type})
             st.error("❌ Failed to generate nudge message")
 
+def show_style_demo():
+    """Show a demonstration of style mimicking"""
+    st.info("🎭 **Style Mimicking Demonstration**")
+    
+    st.markdown("""
+    **Mentor's Communication Style (from sample messages):**
+    - **Tone**: Casual and encouraging
+    - **Common Phrases**: "Hey!", "So basically", "No worries", "You got this!"
+    - **Emoji Usage**: Frequent (👍, 😅, 💪, 😊, 🎯)
+    - **Message Structure**: Short sentences, encouraging language
+    - **Teaching Approach**: Step-by-step with examples
+    
+    **Example Student Message:**
+    > "I'm having trouble understanding recursion. Can you help?"
+    
+    **Expected AI Response (mimicking mentor's style):**
+    > "Hey! No worries, recursion can be tricky at first 😊 So basically, think of it like a function calling itself. Start with simple examples like factorial - that'll help you get the concept. Don't stress, you'll get it with practice! 💪"
+    
+    **Notice how the AI captures:**
+    - ✅ Casual, encouraging tone
+    - ✅ Use of phrases like "Hey!", "So basically", "No worries"
+    - ✅ Emoji usage (😊, 💪)
+    - ✅ Shorter sentences with reassuring language
+    - ✅ The mentor's supportive teaching style
+    """)
+    
+    # Interactive demo
+    if st.button("Try Live Demo"):
+        with st.spinner("Generating AI response..."):
+            from agents import invoke_reply_agent
+            mentor_id = st.session_state.get("current_mentor_id", "mentor_001")
+            demo_response = invoke_reply_agent(mentor_id, "I'm having trouble understanding recursion. Can you help?", "demo_session")
+            
+            if demo_response and not demo_response.startswith("Sorry, I encountered an error"):
+                st.success("**Live AI Response:**")
+                st.write(demo_response)
+                st.caption("🤖 Generated using the mentor's learned communication style")
+            else:
+                st.error("❌ Demo failed - please analyze your style first")
+
 def render_generated_nudge(mentor_id: str):
     """Render the generated nudge message with option to add to session"""
     st.subheader("💬 Generated Nudge")
@@ -153,11 +200,11 @@ def render_generated_nudge(mentor_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.session_state.current_session_id:
+        if st.session_state.get("current_session_id"):
             if st.button("✅ Add to Session", key="add_nudge_to_session"):
                 # Add the nudge as an AI message to the current session
                 db.add_message(
-                    st.session_state.current_session_id, 
+                    st.session_state.get("current_session_id"), 
                     'ai', 
                     nudge_message, 
                     is_ai_generated=True, 
@@ -191,8 +238,8 @@ def render_session_controls():
         create_new_session()
     
     # Session info
-    if st.session_state.current_session_id:
-        session = db.get_session(st.session_state.current_session_id)
+    if st.session_state.get("current_session_id"):
+        session = db.get_session(st.session_state.get("current_session_id"))
         if session:
             st.info(f"**Active Session:** {session.student_id} - {session.created_at[:19]}")
         else:
@@ -211,15 +258,15 @@ def create_new_session():
     st.session_state.current_session_id = session_id
     
     st.success("✅ New session created!")
-    st.rerun()
+        st.rerun()
 
 def render_chat_messages():
     """Render chat messages for current session"""
-    if not st.session_state.current_session_id:
+    if not st.session_state.get("current_session_id"):
         st.info("Create a session to start chatting")
         return
     
-    messages = db.get_session_messages(st.session_state.current_session_id)
+    messages = db.get_session_messages(st.session_state.get("current_session_id"))
     
     if not messages:
         st.info("No messages yet. Start the conversation!")
@@ -242,7 +289,7 @@ def render_chat_input(student_id: str):
 
 def handle_student_message(student_id: str, message: str):
     """Handle incoming student message"""
-    session_id = st.session_state.current_session_id
+    session_id = st.session_state.get("current_session_id")
     mentor_id = st.session_state.current_mentor_id
     
     # Log student message
@@ -286,8 +333,8 @@ def render_analytics():
     """Render session analytics"""
     st.subheader("📊 Session Analytics")
     
-    if st.session_state.current_session_id:
-        messages = db.get_session_messages(st.session_state.current_session_id)
+    if st.session_state.get("current_session_id"):
+        messages = db.get_session_messages(st.session_state.get("current_session_id"))
         
         if messages:
             student_messages = [m for m in messages if m.sender_type == "student"]

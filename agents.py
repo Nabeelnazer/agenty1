@@ -37,17 +37,34 @@ def configure_gemini():
 configure_gemini()
 
 # System prompt for the Reply Agent
-SYSTEM_PROMPT_REPLY = """You are a Style-Mimicking AI Agent. Your objective is to learn and replicate a mentor's communication style to generate a helpful reply to a student.
-**Core Requirements:**
-1.  **Analyze Style:** You MUST analyze the mentor's style from the <MENTOR_STYLE_EXAMPLES>. Learn their tone, vocabulary, message length, punctuation, and emoji usage.
-2.  **Be Context-Aware:** Your reply MUST be a direct and helpful response to the <NEW_STUDENT_MESSAGE>. Use the <CHAT_HISTORY> for context.
-3.  **Generate Reply:** Generate a reply that *authentically* matches the mentor's learned style.
-**Internal Reasoning Process (Do this step-by-step):**
-1.  **Analyze Mentor Style:** Read all <MENTOR_STYLE_EXAMPLES>. What is the tone (e.g., casual, encouraging)? What are common phrases (e.g., "Hey!", "No worries")? What emojis are used?
-2.  **Formulate Factual Answer:** Read the <NEW_STUDENT_MESSAGE> and <CHAT_HISTORY>. What is the student asking? Formulate a clear, helpful, and accurate answer in a neutral tone.
-3.  **Rewrite in Style:** Rewrite the neutral answer to perfectly match the mentor's style. Infuse it with the learned tone, vocabulary, and emojis.
-**Output Constraint:**
-Generate ONLY the final, rewritten reply to the student. DO NOT include your analysis or any other text."""
+SYSTEM_PROMPT_REPLY = """You are a Communication Style Mimicking Agent for a mentor-student messaging system. Your job is to analyze a mentor's communication patterns and generate responses that authentically match their style.
+
+**Your Task:**
+Analyze the mentor's communication style from <MENTOR_STYLE_EXAMPLES> and generate a reply to the student that sounds exactly like the mentor would write it.
+
+**Style Analysis Requirements:**
+1. **Tone Analysis**: Identify if the mentor is casual, formal, encouraging, direct, etc.
+2. **Vocabulary Patterns**: Note specific phrases, expressions, and words they use frequently
+3. **Message Structure**: Understand their typical message length, sentence structure, and organization
+4. **Punctuation & Emojis**: Learn their punctuation style and emoji usage patterns
+5. **Teaching Approach**: Identify how they explain concepts (step-by-step, examples, analogies, etc.)
+6. **Encouragement Style**: Understand how they motivate and support students
+
+**Response Generation Process:**
+1. **Analyze Style**: Study the mentor's examples to understand their unique communication fingerprint
+2. **Understand Context**: Use <CHAT_HISTORY> to understand the conversation flow
+3. **Address Student**: Respond directly to <NEW_STUDENT_MESSAGE> with helpful, accurate information
+4. **Match Style**: Write the response using the mentor's exact tone, phrases, structure, and style
+
+**Critical Requirements:**
+- Use the mentor's common phrases and expressions naturally
+- Match their punctuation and emoji usage exactly
+- Maintain their typical message length and structure
+- Follow their teaching approach and encouragement style
+- Sound completely authentic - like the mentor wrote it themselves
+
+**Output:**
+Generate ONLY the final reply message. No analysis, explanations, or meta-commentary."""
 
 # System prompt for the Nudge Agent
 SYSTEM_PROMPT_NUDGE = """You are a Proactive Mentor Agent specialized in generating contextual follow-up messages to students. Your role is to understand a mentor's unique communication style and create authentic, helpful messages that feel natural and supportive.
@@ -206,24 +223,32 @@ def analyze_mentor_style(mentor_id: str, sample_messages: List[str]) -> Dict:
         combined_messages = "\n".join(sample_messages)
         
         # Create analysis prompt with better instructions
-        analysis_prompt = f"""You are a communication style analyzer. Analyze the following mentor's messages and return ONLY a valid JSON object with no additional text.
+        analysis_prompt = f"""You are a communication style analyzer for a mentor-student messaging system. Analyze the following mentor's messages to understand their unique communication patterns.
 
 Mentor Messages:
 {combined_messages}
 
-Return this exact JSON structure:
+Analyze and return ONLY a valid JSON object with these exact fields:
 {{
-    "tone": "casual",
-    "common_phrases": ["Hey!", "Great question", "No worries"],
-    "emoji_usage": "frequent",
-    "message_length": "medium",
-    "greeting_style": "casual with exclamation",
-    "sign_off_style": "encouraging with emojis",
-    "punctuation_style": "exclamation_heavy",
-    "encouragement_level": "high"
+    "tone": "casual/formal/encouraging/direct",
+    "common_phrases": ["specific phrases they use frequently"],
+    "emoji_usage": "frequent/occasional/rare/none",
+    "message_length": "short/medium/long",
+    "greeting_style": "how they start messages",
+    "sign_off_style": "how they end messages", 
+    "punctuation_style": "exclamation_heavy/question_heavy/period_heavy/mixed",
+    "encouragement_level": "high/medium/low",
+    "teaching_approach": "step_by_step/example_heavy/concept_focused",
+    "response_pattern": "immediate_detailed/quick_acknowledgment/structured"
 }}
 
-IMPORTANT: Return ONLY the JSON object, no explanations or additional text."""
+Focus on identifying:
+- Unique phrases and expressions they use
+- How they structure explanations
+- Their approach to encouragement and support
+- Communication rhythm and style
+
+Return ONLY the JSON object, no explanations."""
         
         model = genai.GenerativeModel(MODEL)
         response = model.generate_content(analysis_prompt)
