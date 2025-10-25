@@ -247,6 +247,29 @@ class DatabaseManager:
         
         return "\n".join(context)
     
+    def get_session(self, session_id: str) -> Optional[ChatSession]:
+        """Get a specific chat session by ID"""
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, mentor_id, student_id, created_at, updated_at
+            FROM chat_sessions WHERE id = ?
+        ''', (session_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return ChatSession(
+                id=row[0],
+                mentor_id=row[1],
+                student_id=row[2],
+                created_at=row[3],
+                updated_at=row[4]
+            )
+        return None
+    
     def save_mentor_style(self, mentor_id: str, style_data: Dict, sample_messages: List[str], 
                          confidence_score: float) -> str:
         """Save analyzed mentor style"""
