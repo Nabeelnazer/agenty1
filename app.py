@@ -34,7 +34,7 @@ def init_session_state():
 
 def render_sidebar():
     """Render simplified sidebar"""
-with st.sidebar:
+    with st.sidebar:
         st.header("🎯 AI Style Mimicking System")
         
         # Mentor ID
@@ -204,7 +204,7 @@ def create_new_session():
     st.session_state.current_session_id = session_id
     
     st.success("✅ New session created!")
-        st.rerun()
+    st.rerun()
 
 def render_chat_messages():
     """Render chat messages for current session"""
