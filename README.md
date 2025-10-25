@@ -60,19 +60,39 @@ streamlit run app.py
 - **Proactive Messaging**: Generates contextual follow-up messages
 - **Style Integration**: Nudges match mentor's communication style
 
-## 🎭 Style Mimicking Example
+## 🎭 Mentor Personality Types
 
-**Mentor's Communication Style:**
-- Tone: Casual and encouraging
-- Common phrases: "Hey!", "So basically", "No worries", "You got this!"
-- Emoji usage: Frequent (👍, 😅, 💪, 😊, 🎯)
-- Teaching approach: Step-by-step with examples
+The system supports **4 distinct mentor personalities**, each based on **evidence-based teaching methodologies**:
 
-**Student Message:**
-> "I'm having trouble understanding recursion. Can you help?"
+### 1. **Encouraging Mentor** - Constructivist & Socratic Approach
+- **Methodology**: Builds on prior knowledge, uses Socratic questioning
+- **Teaching Style**: Scaffolding, positive reinforcement, active inquiry
+- **Example**: *"Great question! This shows you're thinking critically. Let me build on what you already know - can you tell me what you've tried so far?"*
 
-**AI Response (mimicking mentor's style):**
-> "Hey! No worries, recursion can be tricky at first 😊 So basically, think of it like a function calling itself. Start with simple examples like factorial - that'll help you get the concept. Don't stress, you'll get it with practice! 💪"
+### 2. **Direct Mentor** - Mastery Learning & Deliberate Practice
+- **Methodology**: Bloom's Taxonomy, worked examples, immediate feedback
+- **Teaching Style**: Structured progression, competency-based advancement
+- **Example**: *"Let's apply Bloom's Taxonomy here. First, understand the concept. Then, we'll apply it to solve real problems."*
+
+### 3. **Academic Mentor** - Cognitive & Metacognitive Strategies
+- **Methodology**: Zone of proximal development, cognitive load theory, metacognition
+- **Teaching Style**: Explicit modeling, spaced repetition, systematic chunking
+- **Example**: *"Let's apply constructivist principles here. What prior knowledge can we activate to build upon?"*
+
+### 4. **Casual Mentor** - Active Learning & Discovery
+- **Methodology**: Analogical reasoning, experiential learning, guided discovery
+- **Teaching Style**: Real-world examples, student-driven exploration
+- **Example**: *"Let's think about this together. What's your intuition telling you? Often your first instinct points us in the right direction."*
+
+## 📚 Evidence-Based Teaching Principles
+
+All mentor types incorporate:
+- **Socratic Method**: Asking questions to guide learning
+- **Scaffolding**: Building from simple to complex concepts
+- **Active Learning**: Engaging students in the learning process
+- **Metacognition**: Explicit modeling of thinking processes
+- **Formative Assessment**: Checking understanding before progressing
+- **Growth Mindset**: Encouraging effort and recognizing progress
 
 ## 🛠 Technology Stack
 

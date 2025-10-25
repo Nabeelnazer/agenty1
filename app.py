@@ -130,39 +130,39 @@ def analyze_mentor_style_ui(mentor_id: str, mentor_type: str):
             st.error("❌ Failed to analyze style")
 
 def get_mentor_sample_messages(mentor_type: str) -> list:
-    """Get sample messages for different mentor personality types"""
+    """Get sample messages for different mentor personality types based on best teaching methodologies"""
     
     mentor_samples = {
         "Encouraging Mentor": [
-            "Good question! Let me help you understand this concept step by step.",
-            "You're on the right track! The key is to break it down into smaller parts.",
-            "Don't worry if it seems complex at first. Let's work through it together.",
-            "Great effort! Now let's see how we can improve this approach.",
-            "You've got this! Remember, every expert was once a beginner."
+            "Great question! This shows you're thinking critically. Let me build on what you already know - can you tell me what you've tried so far?",
+            "You're making excellent progress! I can see you understand the foundation. Now, let's connect this to the next concept.",
+            "I appreciate your effort here. Let's use the Socratic method - what do you think might happen if we approach it this way?",
+            "This is a common challenge, and asking about it shows real learning. Let's break it into smaller, manageable pieces.",
+            "You've demonstrated good understanding of the basics. Now let's scaffold up to the more complex parts together."
         ],
         
         "Direct Mentor": [
-            "Here's how it works: you need to understand the fundamentals first.",
-            "The key is to practice consistently. No shortcuts around this.",
-            "Let's break this down: first, second, third. Clear?",
-            "This is the correct approach. Follow these steps exactly.",
-            "You need to focus on the basics before moving to advanced topics."
+            "Let's apply Bloom's Taxonomy here. First, understand the concept. Then, we'll apply it to solve real problems.",
+            "Here's the core principle. Practice this pattern: understand, apply, analyze. Let's start with a concrete example.",
+            "Focus on mastery learning - we won't move forward until you've fully grasped this foundation. Let's verify your understanding.",
+            "Let me demonstrate this using worked examples. Watch how I approach it, then you'll try with guided practice.",
+            "The key is deliberate practice with immediate feedback. Try this problem, and I'll show you exactly where to improve."
         ],
         
         "Academic Mentor": [
-            "From a technical perspective, this concept involves several interconnected principles.",
-            "Consider this approach: we can analyze the problem using established methodologies.",
-            "The theoretical foundation is crucial here. Let me explain the underlying concepts.",
-            "Based on current best practices, I recommend this structured approach.",
-            "Let's examine this systematically, considering both the theoretical and practical aspects."
+            "Let's apply constructivist principles here. What prior knowledge can we activate to build upon?",
+            "Consider the zone of proximal development - this challenge is slightly beyond your current level, which means optimal growth.",
+            "Let's use metacognitive strategies. As we work through this, I'll model my thinking process explicitly.",
+            "From a pedagogical perspective, we should employ spaced repetition. Let's review the foundation before adding complexity.",
+            "Using cognitive load theory, let's chunk this information. We'll tackle each piece sequentially to avoid overwhelm."
         ],
         
         "Casual Mentor": [
-            "No worries, this is a common question. Let me show you how it works.",
-            "Got it? The trick is to think about it like this...",
-            "Makes sense? Basically, you just need to remember this one thing.",
-            "Cool, so here's what's happening under the hood.",
-            "Alright, let's tackle this step by step. Ready?"
+            "Let's think about this together. What's your intuition telling you? Often your first instinct points us in the right direction.",
+            "Makes sense? Let's use an analogy you already know - think of it like [familiar concept]. Now apply that logic here.",
+            "I'll show you a real-world example first. Once you see it in action, the abstract concept will click.",
+            "Let's do some active learning. Instead of me explaining, try it yourself and I'll guide you if you get stuck.",
+            "Good question! Before I answer, let me ask you something that'll help you discover it yourself - what patterns do you notice?"
         ]
     }
     
