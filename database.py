@@ -253,7 +253,7 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT id, mentor_id, student_id, created_at, updated_at
+            SELECT id, mentor_id, student_id, status, created_at, updated_at
             FROM chat_sessions WHERE id = ?
         ''', (session_id,))
         
@@ -265,8 +265,9 @@ class DatabaseManager:
                 id=row[0],
                 mentor_id=row[1],
                 student_id=row[2],
-                created_at=row[3],
-                updated_at=row[4]
+                status=row[3],
+                created_at=row[4],
+                updated_at=row[5]
             )
         return None
     
