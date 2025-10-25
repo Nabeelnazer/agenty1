@@ -204,7 +204,7 @@ def create_new_session():
     st.session_state.current_session_id = session_id
     
     st.success("✅ New session created!")
-    st.rerun()
+        st.rerun()
 
 def render_chat_messages():
     """Render chat messages for current session"""
@@ -281,50 +281,6 @@ def handle_ai_response(session_id: str, student_id: str, mentor_id: str, message
             else:
                 st.error("❌ Failed to generate AI response")
 
-def render_demo_section():
-    """Render the style mimicking demo section"""
-    st.subheader("🎭 Style Mimicking Demo")
-    
-    st.markdown("""
-    **This system demonstrates AI communication style mimicking with multiple mentor personalities:**
-    
-    **Available Mentor Types:**
-    
-    **1. Encouraging Mentor** - Supportive and motivating
-    - Tone: Positive and reassuring
-    - Phrases: "Good question!", "You're on the right track", "Let's work through it together"
-    - Approach: Step-by-step guidance with encouragement
-    
-    **2. Direct Mentor** - Straightforward and clear
-    - Tone: Professional and direct
-    - Phrases: "Here's how it works", "The key is", "Follow these steps exactly"
-    - Approach: Clear, structured explanations
-    
-    **3. Academic Mentor** - Formal and detailed
-    - Tone: Professional and analytical
-    - Phrases: "From a technical perspective", "Consider this approach", "Based on best practices"
-    - Approach: Comprehensive, theory-based explanations
-    
-    **4. Casual Mentor** - Relaxed and friendly
-    - Tone: Informal and approachable
-    - Phrases: "No worries", "Got it?", "Cool, so here's what's happening"
-    - Approach: Conversational, easy-going explanations
-    
-    **Example Student Message:**
-    > "I'm having trouble understanding recursion. Can you help?"
-    
-    **Different AI Responses based on mentor type:**
-    - **Encouraging**: "Good question! Let me help you understand this step by step. Don't worry if it seems complex at first."
-    - **Direct**: "Here's how it works: recursion is a function calling itself. The key is to have a base case."
-    - **Academic**: "From a technical perspective, recursion involves a function invoking itself with modified parameters."
-    - **Casual**: "No worries, this is a common question. Got it? The trick is to think about it like this..."
-    
-    **The AI captures each mentor's unique:**
-    - ✅ Communication tone and style
-    - ✅ Preferred phrases and expressions
-    - ✅ Teaching approach and structure
-    - ✅ Level of formality and encouragement
-    """)
 
 def main():
     """Main application function"""
@@ -347,8 +303,6 @@ def main():
         render_chat_messages()
         render_chat_input()
         
-        st.divider()
-        render_demo_section()
 
 if __name__ == "__main__":
     main()
