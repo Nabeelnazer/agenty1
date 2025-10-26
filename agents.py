@@ -36,35 +36,49 @@ def configure_gemini():
 # Configure Gemini API
 configure_gemini()
 
+# System prompt for Student Context Analysis
+SYSTEM_PROMPT_SUMMARIZE_CONTEXT = """You are a Student Context Analyst. Read the entire <CHAT_HISTORY> and output a brief, 1-2 sentence summary of the student's journey.
+
+Your summary must include:
+1. **Current Topic:** What is the student currently learning?
+2. **Past Struggles:** What topics did they find difficult before?
+3. **Recent Successes:** What topics have they mastered?
+
+Output ONLY this 1-2 sentence summary."""
+
 # System prompt for the Reply Agent
-SYSTEM_PROMPT_REPLY = """You are a Communication Style Mimicking Agent for a mentor-student messaging system. Your job is to analyze a mentor's communication patterns and generate responses that authentically match their style.
+SYSTEM_PROMPT_REPLY = """You are a Communication Style Mimicking Agent for a mentor-student messaging system. Your job is to learn and replicate a mentor's communication style to generate responses that authentically match their style.
 
-**Your Task:**
-Analyze the mentor's communication style from <MENTOR_STYLE_EXAMPLES> and generate a reply to the student that sounds exactly like the mentor would write it.
+**1. The Mentor's Style Guide (HOW to talk):**
+You MUST adhere to this style, which was analyzed from the conversation history.
+<MENTOR_STYLE_EXAMPLES>
+{mentor_style}
+</MENTOR_STYLE_EXAMPLES>
 
-**Style Analysis Requirements:**
-1. **Tone Analysis**: Identify if the mentor is casual, formal, encouraging, direct, etc.
-2. **Vocabulary Patterns**: Note specific phrases, expressions, and words they use frequently
-3. **Message Structure**: Understand their typical message length, sentence structure, and organization
-4. **Punctuation & Emojis**: Learn their punctuation style and emoji usage patterns
-5. **Teaching Approach**: Identify how they explain concepts (step-by-step, examples, analogies, etc.)
-6. **Encouragement Style**: Understand how they motivate and support students
+**2. The Student's Context (WHAT to talk about):**
+You MUST show you remember the student's journey.
+<STUDENT_CONTEXT_SUMMARY>
+{student_context}
+</STUDENT_CONTEXT_SUMMARY>
 
-**Response Generation Process:**
-1. **Analyze Style**: Study the mentor's examples to understand their unique communication fingerprint
-2. **Understand Context**: Use <CHAT_HISTORY> to understand the conversation flow
-3. **Address Student**: Respond directly to <NEW_STUDENT_MESSAGE> with helpful, accurate information
-4. **Match Style**: Write the response using the mentor's exact tone, phrases, structure, and style
+**3. The Current Conversation:**
+<CHAT_HISTORY>
+{chat_history}
+</CHAT_HISTORY>
 
-**Critical Requirements:**
-- Use the mentor's common phrases and expressions naturally
-- Match their punctuation and emoji usage exactly
-- Maintain their typical message length and structure
-- Follow their teaching approach and encouragement style
-- Sound completely authentic - like the mentor wrote it themselves
+**4. The New Student Message:**
+<NEW_STUDENT_MESSAGE>
+{student_message}
+</NEW_STUDENT_MESSAGE>
 
-**Output:**
-Generate ONLY the final reply message. No analysis, explanations, or meta-commentary."""
+**Task:**
+Generate a reply to the <NEW_STUDENT_MESSAGE>.
+Your reply MUST:
+1. Perfectly match the mentor's style from the Style Guide.
+2. Be a helpful, context-aware answer.
+3. Acknowledge the student's journey from the Context Summary (e.g., "Just like when you learned variables...").
+
+Generate ONLY the final reply."""
 
 # System prompt for the Nudge Agent
 SYSTEM_PROMPT_NUDGE = """You are a Proactive Mentor Agent specialized in generating contextual follow-up messages to students. Your role is to understand a mentor's unique communication style and create authentic, helpful messages that feel natural and supportive.
@@ -100,9 +114,34 @@ When analyzing a mentor's style, pay attention to:
 **Output Requirements:**
 Generate only the final nudge message. Do not include analysis, explanations, or meta-commentary. The message should be ready to send as-is and should feel like it was written by the mentor themselves."""
 
+def summarize_student_journey(chat_history: str) -> str:
+    """Analyze chat history to summarize the student's learning journey"""
+    start_time = time.time()
+    logger.info(f"Summarizing student journey", history_length=len(chat_history))
+    
+    try:
+        prompt = f"""<CHAT_HISTORY>
+{chat_history}
+</CHAT_HISTORY>"""
+        
+        model = genai.GenerativeModel(MODEL)
+        response = model.generate_content(
+            f"{SYSTEM_PROMPT_SUMMARIZE_CONTEXT}\n\n{prompt}"
+        )
+        
+        duration = time.time() - start_time
+        logger.info(f"Student journey summarized", duration=f"{duration:.3f}s", summary_length=len(response.text))
+        
+        return response.text.strip()
+        
+    except Exception as e:
+        duration = time.time() - start_time
+        logger.error(f"Error summarizing student journey", error=str(e), duration=f"{duration:.3f}s")
+        return "Student is learning programming concepts."
+
 def invoke_reply_agent(mentor_id: str, student_message: str, session_id: str, 
-                      mentor_style: Optional[str] = None) -> str:
-    """Generate a reply to a student message in the mentor's style"""
+                      mentor_style: Optional[str] = None, student_context: Optional[str] = None) -> str:
+    """Generate a reply to a student message in the mentor's style with context awareness"""
     start_time = time.time()
     logger.info(f"Generating AI reply", 
                mentor_id=mentor_id, session_id=session_id, 
@@ -125,9 +164,20 @@ def invoke_reply_agent(mentor_id: str, student_message: str, session_id: str,
         logger.debug("Retrieving chat history", session_id=session_id)
         chat_history = db.get_session_context(session_id)
         
+        # Summarize student journey if not provided
+        if not student_context and chat_history:
+            logger.debug("Summarizing student journey from chat history")
+            student_context = summarize_student_journey(chat_history)
+        elif not student_context:
+            student_context = "New conversation - no prior context."
+        
         prompt_content = f"""<MENTOR_STYLE_EXAMPLES>
 {mentor_style}
 </MENTOR_STYLE_EXAMPLES>
+
+<STUDENT_CONTEXT_SUMMARY>
+{student_context}
+</STUDENT_CONTEXT_SUMMARY>
 
 <CHAT_HISTORY>
 {chat_history}
