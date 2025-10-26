@@ -64,8 +64,15 @@ def render_sidebar():
         
         # Session Management
         st.subheader("💬 Session Management")
-        if st.button("🆕 New Session", help="Start a new chat session"):
-            create_new_session()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🆕 New Session", help="Start a new chat session"):
+                create_new_session()
+        
+        with col2:
+            if st.button("📚 Load Demo", help="Load a demo conversation to analyze"):
+                load_demo_conversation(mentor_id, mentor_type)
         
         # Show current session info
         if st.session_state.get("current_session_id"):
@@ -192,6 +199,84 @@ def simulate_exam(mentor_id: str, exam_type: str):
         else:
             log_user_action(mentor_id, "EXAM_SIMULATION_FAILED", {"exam_type": exam_type})
             st.error("❌ Failed to generate nudge message")
+
+def get_demo_conversations(mentor_type: str) -> list:
+    """Get demo conversation history based on mentor type"""
+    
+    demo_conversations = {
+        "Encouraging Mentor": [
+            {"sender": "student", "content": "Hi... I'm supposed to start the Python basics but I'm completely lost. I've never coded before and feel really stupid."},
+            {"sender": "mentor", "content": "Hey there! Please don't feel that way! 😊 Seriously, everyone feels that way at the start. It's like learning a new language! I'm here to help you every step of the way. Let's start with just one tiny thing: a 'variable'. Sound good?"},
+            {"sender": "student", "content": "ok, i guess. what is it?"},
+            {"sender": "mentor", "content": "Awesome! ✨ A variable is just a box. You can put things in it. Let's make a box called `my_name` and put your name in it. Can you try to write what that might look like?"},
+            {"sender": "student", "content": "my_name = 'John'?"},
+            {"sender": "mentor", "content": "YES! You got it on the first try! 🚀 That's exactly it. See? You're already coding! Now, how would you make a new box called `my_age` and put your age in it?"},
+            {"sender": "student", "content": "my_age = 30"},
+            {"sender": "mentor", "content": "Perfect! You're on a roll. 👍 Now you have two 'boxes'. What do you think happens if you want to see what's inside the `my_name` box?"},
+            {"sender": "student", "content": "print(my_name)?"},
+            {"sender": "mentor", "content": "You got it! 👏 You're a natural at this. Okay, I think you've mastered variables. Let's take a break, great work today!"}
+        ],
+        
+        "Direct Mentor": [
+            {"sender": "student", "content": "How do I use a dictionary to store user data?"},
+            {"sender": "mentor", "content": "Your query is premature. We have not covered foundational data structures. You cannot build a roof before the foundation is laid. We will begin with lists."},
+            {"sender": "student", "content": "oh. okay. what's a list?"},
+            {"sender": "mentor", "content": "A list is an ordered, mutable collection of items. Use square brackets []. Create a list named `student_names` containing 'Alice', 'Bob', and 'Charlie'. Show me the code."},
+            {"sender": "student", "content": "student_names = ['Alice', 'Bob', 'Charlie']"},
+            {"sender": "mentor", "content": "Correct. Now, how do you access the second item in that list?"},
+            {"sender": "student", "content": "student_names[2]?"},
+            {"sender": "mentor", "content": "Incorrect. That is the third item. Indexing begins at 0. Try again."},
+            {"sender": "student", "content": "student_names[1]"},
+            {"sender": "mentor", "content": "Correct. You have demonstrated understanding of list creation and indexing. You may now proceed to dictionaries."}
+        ],
+        
+        "Academic Mentor": [
+            {"sender": "student", "content": "I need help with functions in Python."},
+            {"sender": "mentor", "content": "Let us establish the theoretical foundation first. From a computational perspective, a function is an abstraction mechanism that encapsulates reusable logic. What is your current understanding of modular programming?"},
+            {"sender": "student", "content": "I'm not sure what that means."},
+            {"sender": "mentor", "content": "Understood. Let us apply constructivist principles. Consider what you know about mathematical functions: f(x) = 2x. The function takes an input and produces an output. This same paradigm applies in programming."},
+            {"sender": "student", "content": "So a function takes input and gives output?"},
+            {"sender": "mentor", "content": "Precisely. Now, let us examine the syntax. In Python, we use the `def` keyword followed by the function name and parameters. I shall model this: `def greet(name): return f'Hello, {name}'`. Do you observe the structure?"},
+            {"sender": "student", "content": "Yes, it starts with def, then the name, then parentheses."},
+            {"sender": "mentor", "content": "Excellent observation. You have identified the syntactic pattern. Now, applying zone of proximal development, create a function that takes two numbers and returns their sum."}
+        ],
+        
+        "Casual Mentor": [
+            {"sender": "student", "content": "I'm stuck on this loop thing."},
+            {"sender": "mentor", "content": "Alright, let's tackle this together. What's your intuition telling you about what a loop might do? Take a guess."},
+            {"sender": "student", "content": "Maybe it repeats something?"},
+            {"sender": "mentor", "content": "Exactly! That's it. A loop is just code that repeats. Think of it like a playlist that keeps playing songs over and over. Makes sense?"},
+            {"sender": "student", "content": "Yeah, I think so."},
+            {"sender": "mentor", "content": "Cool. So here's a real example... say you want to print 'Hello' five times. Instead of writing print('Hello') five times, you write a loop. Want to see it?"},
+            {"sender": "student", "content": "Yes please."},
+            {"sender": "mentor", "content": "Alright: `for i in range(5): print('Hello')`. That's it. The `range(5)` means 'do this 5 times'. Now you try - write a loop that prints your name 3 times."}
+        ]
+    }
+    
+    return demo_conversations.get(mentor_type, demo_conversations["Encouraging Mentor"])
+
+def load_demo_conversation(mentor_id: str, mentor_type: str):
+    """Load a demo conversation to demonstrate context awareness"""
+    log_user_action(mentor_id, "DEMO_CONVERSATION_LOADED", {"mentor_type": mentor_type})
+    
+    with st.spinner(f"Loading {mentor_type} demo conversation..."):
+        # Create new session
+        session_id = db.create_session(mentor_id, "demo_student")
+        st.session_state.current_session_id = session_id
+        
+        # Get demo conversation
+        demo_messages = get_demo_conversations(mentor_type)
+        
+        # Load all messages into the session
+        for msg in demo_messages:
+            sender_type = msg["sender"]
+            content = msg["content"]
+            is_ai = (sender_type == "mentor")
+            db.add_message(session_id, sender_type, content, is_ai_generated=is_ai, approval_status="approved")
+        
+        st.success(f"✅ Loaded {len(demo_messages)} messages from {mentor_type} demo!")
+        st.info("💡 Now try chatting! The AI will respond in this mentor's style and remember the conversation context.")
+        st.rerun()
 
 def create_new_session():
     """Create a new chat session"""
