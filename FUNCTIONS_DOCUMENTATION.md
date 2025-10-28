@@ -399,42 +399,18 @@ User clicks "Python Exam"
 
 ---
 
-## 📊 For Interview Questions
+## 🎯 System Architecture
 
-### **"What does your system do?"**
-*"It's a communication style mimicking agent that learns from mentor-student conversations and generates responses that match the mentor's unique style while maintaining context awareness of the student's learning journey."*
+### **Two-Step Agentic Chain**
 
-### **"How does it work?"**
-*"It uses a dual-analysis system: first, it analyzes HOW the mentor communicates (style), then WHAT the student has been learning (context). It combines both to generate authentic, context-aware responses."*
+1. **Analyst Agent** - Extracts concrete communication patterns from text
+2. **Context Agent** - Summarizes student's learning journey  
+3. **Generator Agent** - Produces responses following style rules and context
 
-### **"What's special about your approach?"**
-*"Unlike simple chatbots, my system separates style from content. It can learn 4 distinct mentor personalities - from emoji-heavy encouraging mentors to formal academic mentors - and adapts accordingly while remembering the entire student journey."*
+### **Key Technical Features**
 
-### **"How do you handle context?"**
-*"I implemented a context summarization function that analyzes the entire conversation history and extracts the student's current topic, past struggles, and recent successes. This allows the AI to reference previous topics naturally."*
-
-### **"Can you show me it working?"**
-*"Yes! Click 'Load Demo' to see pre-loaded conversations for each mentor type. Then ask a question and watch the AI respond in that exact style while referencing the conversation context."*
-
----
-
-## 🎓 Technical Terms You Should Know
-
-- **Dual-Analysis:** Separating style analysis from context analysis
-- **Style Fingerprinting:** Creating a unique profile of communication patterns
-- **Context Awareness:** Remembering and referencing conversation history
-- **Session Management:** Tracking conversations and maintaining state
-- **Event-Based Nudging:** Proactive messages triggered by student actions
-- **Socratic Method:** Teaching through questions rather than direct answers
-- **Scaffolding:** Building from simple to complex concepts progressively
-- **Zone of Proximal Development:** Teaching at the optimal challenge level
-
----
-
-## 💡 Key Differentiators
-
-1. **Multiple Personality Types** - Not just one generic style
-2. **Real Context Memory** - Not just recent messages, but entire journey
-3. **Evidence-Based Teaching** - Grounded in actual pedagogical theory
-4. **Demo Conversations** - Immediate demonstration without setup
-5. **Production-Ready** - Clean code, logging, error handling
+- **Dual-Analysis System**: Separates style analysis from context analysis
+- **Concrete Pattern Extraction**: Focuses on observable text patterns, not abstract interpretations
+- **Session Management**: Persistent conversation tracking with SQLite
+- **Event-Based Nudging**: Proactive follow-up messages triggered by student actions
+- **Multiple Mentor Personalities**: 4 distinct communication styles with evidence-based teaching methodologies
