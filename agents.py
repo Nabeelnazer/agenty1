@@ -46,39 +46,40 @@ Your summary must include:
 
 Output ONLY this 1-2 sentence summary."""
 
-# System prompt for the Reply Agent
-SYSTEM_PROMPT_REPLY = """You are a Communication Style Mimicking Agent for a mentor-student messaging system. Your job is to learn and replicate a mentor's communication style to generate responses that authentically match their style.
+# System prompt for the Reply Agent (Generator)
+SYSTEM_PROMPT_REPLY = """You are an AI Mentor's Assistant. Your ONLY task is to write a reply to a student.
+You MUST write the reply in the exact style of the mentor.
 
-**1. The Mentor's Style Guide (HOW to talk):**
-You MUST adhere to this style, which was analyzed from the conversation history.
-<MENTOR_STYLE_EXAMPLES>
+A previous agent has analyzed the mentor's style. Your reply MUST strictly follow all rules in this style guide.
+
+<STYLE_GUIDE_JSON>
 {mentor_style}
-</MENTOR_STYLE_EXAMPLES>
+</STYLE_GUIDE_JSON>
 
-**2. The Student's Context (WHAT to talk about):**
-You MUST show you remember the student's journey.
 <STUDENT_CONTEXT_SUMMARY>
 {student_context}
 </STUDENT_CONTEXT_SUMMARY>
 
-**3. The Current Conversation:**
-<CHAT_HISTORY>
+<RECENT_CHAT_HISTORY>
 {chat_history}
-</CHAT_HISTORY>
+</RECENT_CHAT_HISTORY>
 
-**4. The New Student Message:**
 <NEW_STUDENT_MESSAGE>
 {student_message}
 </NEW_STUDENT_MESSAGE>
 
-**Task:**
-Generate a reply to the <NEW_STUDENT_MESSAGE>.
-Your reply MUST:
-1. Perfectly match the mentor's style from the Style Guide.
-2. Be a helpful, context-aware answer.
-3. Acknowledge the student's journey from the Context Summary (e.g., "Just like when you learned variables...").
+Task:
+1. Read the <NEW_STUDENT_MESSAGE>.
+2. Read the <RECENT_CHAT_HISTORY> and <STUDENT_CONTEXT_SUMMARY> to understand what to talk about.
+3. Write a helpful, relevant reply.
+4. **Crucially:** Re-write your reply to perfectly match all the rules in the <STYLE_GUIDE_JSON>.
+   - Match the `formality` and `tone`.
+   - Use emojis ONLY as specified by `emoji_usage`.
+   - Use punctuation as specified by `punctuation_style`.
+   - Try to use phrases from `common_phrases` and `greeting_examples` if it sounds natural.
+   - Reference the student's journey from the context summary when relevant.
 
-Generate ONLY the final reply."""
+Generate ONLY the final reply to the student."""
 
 # System prompt for the Nudge Agent
 SYSTEM_PROMPT_NUDGE = """You are a Proactive Mentor Agent specialized in generating contextual follow-up messages to students. Your role is to understand a mentor's unique communication style and create authentic, helpful messages that feel natural and supportive.
@@ -264,7 +265,7 @@ def invoke_nudge_agent(mentor_id: str, event_description: str,
         return "Sorry, I encountered an error while generating a nudge. Please try again."
 
 def analyze_mentor_style(mentor_id: str, sample_messages: List[str]) -> Dict:
-    """Analyze mentor's communication style from sample messages"""
+    """Analyze mentor's communication style from sample messages using concrete text patterns"""
     start_time = time.time()
     logger.info(f"Analyzing mentor style", mentor_id=mentor_id, sample_count=len(sample_messages))
     
@@ -272,32 +273,26 @@ def analyze_mentor_style(mentor_id: str, sample_messages: List[str]) -> Dict:
         # Combine all sample messages
         combined_messages = "\n".join(sample_messages)
         
-        # Create analysis prompt with better instructions
-        analysis_prompt = f"""You are a communication style analyzer for a mentor-student messaging system. Analyze the following mentor's messages to understand their unique communication patterns.
+        # Step 1: The "Analyst" Agent - Extract CONCRETE patterns
+        analysis_prompt = f"""You are a meticulous Communication Pattern Analyzer. Your only job is to read the <MENTOR_MESSAGES> and output a valid JSON object that captures the mentor's literal communication patterns.
 
-Mentor Messages:
+<MENTOR_MESSAGES>
 {combined_messages}
+</MENTOR_MESSAGES>
 
 Analyze and return ONLY a valid JSON object with these exact fields:
+
 {{
-    "tone": "casual/formal/encouraging/direct",
-    "common_phrases": ["specific phrases they use frequently"],
-    "emoji_usage": "frequent/occasional/rare/none",
-    "message_length": "short/medium/long",
-    "greeting_style": "how they start messages",
-    "sign_off_style": "how they end messages", 
-    "punctuation_style": "exclamation_heavy/question_heavy/period_heavy/mixed",
-    "encouragement_level": "high/medium/low",
-    "teaching_approach": "step_by_step/example_heavy/concept_focused",
-    "response_pattern": "immediate_detailed/quick_acknowledgment/structured"
+  "formality": "casual (uses 'hey', 'yeah', 'gonna') or formal (uses 'greetings', 'acknowledged', 'proceed')",
+  "tone": "encouraging (uses praise, 'you got this!') or direct (no-nonsense, factual) or socratic (asks guiding questions)",
+  "emoji_usage": "none, rare (1-2 per message), or frequent (in almost every message)",
+  "punctuation_style": "Uses exclamation points frequently! or Uses periods only. or Uses ellipses... often. or Mixed punctuation",
+  "greeting_examples": ["exact greetings found in text", "e.g., 'Hey there!'", "'Hi,'"],
+  "sign_off_examples": ["exact sign-offs found", "e.g., 'You got this!'", "'Keep it up!'"],
+  "common_phrases": ["unique recurring words or phrases", "e.g., 'No worries'", "'Think of it like...'", "'Let's break it down'"]
 }}
 
-Focus on identifying:
-- Unique phrases and expressions they use
-- How they structure explanations
-- Their approach to encouragement and support
-- Communication rhythm and style
-
+Focus ONLY on what you literally see in the text. Do not interpret or abstract.
 Return ONLY the JSON object, no explanations."""
         
         model = genai.GenerativeModel(MODEL)
