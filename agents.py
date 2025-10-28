@@ -368,16 +368,3 @@ Return ONLY the JSON object, no explanations."""
         st.error(f"Error analyzing mentor style: {str(e)}")
         return {}
 
-def generate_ai_response_with_approval(mentor_id: str, student_message: str, session_id: str) -> str:
-    """Generate AI response and add to approval queue"""
-    
-    # Generate the response
-    ai_response = invoke_reply_agent(mentor_id, student_message, session_id)
-    
-    # Add student message to database
-    student_message_id = db.add_message(session_id, 'student', student_message)
-    
-    # Add AI response to approval queue
-    queue_id = db.add_ai_response_to_queue(session_id, student_message_id, ai_response)
-    
-    return queue_id, ai_response
